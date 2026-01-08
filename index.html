@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HeaderLens | GA Cyber Tech</title>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+/* ===== Cyber Background ===== */
+body {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(79,70,229,0.18), transparent 45%),
+    linear-gradient(180deg, #020617 0%, #020617 100%);
+}
+
+/* Grid overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148,163,184,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at center, black 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ambient glow */
+.glow {
+  position: absolute;
+  inset: -80px;
+  background: radial-gradient(circle, rgba(79,70,229,0.35), transparent 60%);
+  filter: blur(70px);
+  z-index: -1;
+}
+
+/* Loading dots */
+.loading-dots span {
+  animation: blink 1.4s infinite both;
+}
+.loading-dots span:nth-child(2) { animation-delay: .2s }
+.loading-dots span:nth-child(3) { animation-delay: .4s }
+
+@keyframes blink {
+  0% { opacity: .2 }
+  20% { opacity: 1 }
+  100% { opacity: .2 }
+}
+</style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center text-slate-200">
+
+<div class="relative max-w-6xl w-full px-6">
+  <div class="glow"></div>
+
+  <!-- Branding -->
+  <div class="text-center mb-12">
+    <h1 class="text-6xl font-bold tracking-tight">
+      Header<span class="text-indigo-400">Lens</span>
+    </h1>
+    <p class="text-slate-400 mt-3">
+      Website Security Audit Tool
+    </p>
+    <p class="text-xs text-slate-500 mt-2">
+      Built & launched by GA Cyber Tech
+    </p>
+  </div>
+
+  <!-- Search -->
+  <div class="bg-slate-900/80 backdrop-blur border border-slate-700 rounded-2xl shadow-2xl p-8">
+    <div class="flex items-center gap-4">
+      <input
+        id="urlInput"
+        placeholder="example.com"
+        class="flex-1 p-5 text-lg rounded-full bg-slate-950 border border-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+        onkeydown="if(event.key==='Enter') runAudit()" />
+
+      <button
+        id="scanBtn"
+        onclick="runAudit()"
+        class="px-8 py-4 rounded-full bg-[#4f46e5] hover:bg-indigo-600 transition font-semibold text-lg flex items-center gap-2">
+
+        <span id="scanText">Scan</span>
+        <span id="loader" class="hidden loading-dots">
+          <span>.</span><span>.</span><span>.</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="result" class="mt-12 hidden">
+
+    <!-- Score -->
+    <div class="text-center mb-8">
+      <div id="scoreText" class="text-2xl font-bold"></div>
+      <div class="w-full bg-slate-800 rounded-full h-4 mt-4 overflow-hidden">
+        <div id="scoreBar"
+          class="h-4 bg-gradient-to-r from-red-500 via-yellow-400 to-emerald-500 transition-all duration-1000"
+          style="width:0%">
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-slate-900 rounded-xl border border-slate-700 p-6 overflow-x-auto">
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="text-slate-400 border-b border-slate-700">
+            <th class="p-4 text-left">Security Header</th>
+            <th class="p-4 text-center">Status</th>
+            <th class="p-4 text-left">Evidence</th>
+            <th class="p-4 text-left">Why It Matters</th>
+            <th class="p-4 text-left">How to Fix</th>
+          </tr>
+        </thead>
+        <tbody id="table"></tbody>
+      </table>
+
+      <button
+        id="pdfBtn"
+        class="mt-8 px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 transition font-semibold">
+        Download Report as PDF
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = "http://localhost:5000";
+
+async function runAudit() {
+  const url = urlInput.value.trim();
+  if (!url) return alert("Enter a domain");
+
+  scanBtn.disabled = true;
+  scanText.textContent = "Scanning";
+  loader.classList.remove("hidden");
+
+  try {
+    const res = await fetch(`${API}/audit?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    scoreText.textContent = `Security Score: ${data.score}/100`;
+    scoreBar.style.width = "0%";
+    setTimeout(() => scoreBar.style.width = `${data.score}%`, 100);
+
+    const tbody = document.getElementById("table");
+    tbody.innerHTML = "";
+
+    Object.entries(data.headers).forEach(([header, info]) => {
+      tbody.innerHTML += `
+        <tr class="border-t border-slate-800 hover:bg-slate-800/40 transition align-top">
+          <td class="p-4 font-medium">${header}</td>
+
+          <td class="p-4 text-center font-semibold ${
+            info.present ? "text-emerald-400" : "text-red-400"
+          }">
+            ${info.present ? "PASS" : "FAIL"}
+          </td>
+
+          <td class="p-4 text-sm text-slate-400">
+            ${info.present
+              ? `<code>${info.value || "Present"}</code>`
+              : "Not returned by server"}
+          </td>
+
+          <td class="p-4 text-sm text-slate-300">
+            ${info.why}
+          </td>
+
+          <td class="p-4 text-sm">
+            ${info.present
+              ? "<span class='text-slate-500'>No action required</span>"
+              : `<code class="text-emerald-400">${info.fix}</code>`}
+          </td>
+        </tr>
+      `;
+    });
+
+    pdfBtn.onclick = () =>
+      window.open(`${API}/export/pdf?url=${encodeURIComponent(url)}`);
+
+    result.classList.remove("hidden");
+
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    scanBtn.disabled = false;
+    scanText.textContent = "Scan";
+    loader.classList.add("hidden");
+  }
+}
+</script>
+
+</body>
+</html>
