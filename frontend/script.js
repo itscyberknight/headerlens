@@ -1,4 +1,4 @@
-const API = "http://localhost:5000";
+const API = "https://YOUR-BACKEND-URL";
 
 async function runAudit() {
   const urlInput = document.getElementById("urlInput");
@@ -51,3 +51,4 @@ async function runAudit() {
 
   result.classList.remove("hidden");
 }
+
