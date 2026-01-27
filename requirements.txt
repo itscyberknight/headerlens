@@ -1,6 +1,4 @@
 flask
 flask-cors
 requests
-dnspython
 reportlab
-gunicorn
